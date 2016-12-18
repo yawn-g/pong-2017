@@ -22,9 +22,13 @@ Player p1, p2;
 
 void drawBackground() {
   gb.display.clear();
-  
+
+  gb.display.setColor(BLACK);
+  gb.display.drawFastHLine(0, 0, LCDWIDTH);
+  gb.display.drawFastHLine(0, 47, LCDWIDTH);
+
   gb.display.setColor(GRAY);
-  gb.display.fillRect(41, 0, 2, 48);
+  gb.display.fillRect(41, 1, 2, 46);
   
   gb.display.cursorX = 29;
   gb.display.cursorY = 2;
@@ -36,10 +40,6 @@ void drawBackground() {
   gb.display.drawPixel(0, 3);
   gb.display.fillRect(56, 2, 27, 3);
   gb.display.drawPixel(83, 3);
-  
-  gb.display.setColor(BLACK);
-  gb.display.drawFastHLine(0, 0, LCDWIDTH);
-  gb.display.drawFastHLine(0, 47, LCDWIDTH);
 }
 
 void setup() {
@@ -54,5 +54,7 @@ void setup() {
 void loop() {
   if (gb.update()) {
     drawBackground();
+
+    if (gb.buttons.pressed(BTN_C)) gb.titleScreen(F("PONG 2017"));
   }
 }
