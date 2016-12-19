@@ -3,52 +3,83 @@
 Gamebuino gb;
 
 class Player {
+  private:
+    
   public:
-    Player(bool);
-    bool id;
+    Player();
+    byte id;
     byte x, y;
-    byte xMin, yMin;
-    byte padSize;
+    byte padWidth, padHeight;
     byte roundsWon;
     byte xSpeed, ySpeed;
-    
+    byte points;
+    int roundsBarDir;
+    byte roundsBarX;
+
+    void initPlayer(byte p);
+    byte padTop(); // return the top pixel of the pad
     void drawPad();
     void moveUp();
     void moveDown();
 };
 
-Player::Player(bool p) {
-  id = p;
-  if (p == 0) x = 0;
-  else x = 82;
+Player::Player() {
   y = 23;
-  padSize = 7;
+  padHeight = 7;
+  padWidth = 2;
   roundsWon = 5;
   ySpeed = 2;
 }
 
-void Player::drawPad() {
-  byte top;
-  top = y - floor(padSize/2);
+void Player::initPlayer(byte p) {
+  id = p;
+  if (id == 0) {
+    x = 0;
+    roundsBarX = 36;
+    roundsBarDir = -1;
+  }
+  else {
+    x = 82;
+    roundsBarX = 44;
+    roundsBarDir = 1;
+  }
+}
 
+byte Player::padTop() {
+  return y - floor(padHeight/2);
+}
+void Player::drawPad() {
   gb.display.setColor(BLACK);
-  gb.display.fillRect(x, top, 2, padSize);
+  gb.display.fillRect(x, padTop(), padWidth, padHeight);
+  // debug
+  /*
+  gb.display.cursorY = padTop() +1;
+  gb.display.cursorX = 4;
+  gb.display.print(id);
+  gb.display.print(": x=");
+  gb.display.print(x);*/
 }
 
 void Player::moveUp() {
-  if (y > 2) y -= ySpeed;
+  if (padTop() > 1) y -= ySpeed;
 }
 void Player::moveDown() {
-  if (y < LCDHEIGHT-2) y += ySpeed;
+  if (padTop() + padHeight < LCDHEIGHT-2) y += ySpeed;
 }
 
+Player player[2];
+
 class Ball {
+  private:
+    byte width;
+    
   public:
     Ball();
     byte x, y;
     int xSpeed, ySpeed;
     void draw();
     void move();
+    void padCollide();
 };
 
 Ball::Ball() {
@@ -56,11 +87,12 @@ Ball::Ball() {
   y = 23;
   xSpeed = 1;
   ySpeed = 1;
+  width = 2;
 }
 
 void Ball::draw() {
   gb.display.setColor(BLACK);
-  gb.display.fillRect(x, y, 2, 2);
+  gb.display.fillRect(x, y, width, width);
 }
 
 void Ball::move() {
@@ -82,10 +114,16 @@ void Ball::move() {
   }
 }
 
+void Ball::padCollide() {
+  if (gb.collideRectRect(x, y, width, width, player[0].x, player[0].padTop(), player[0].padWidth, player[0].padHeight)) {
+    gb.sound.playTick();
+    xSpeed = -xSpeed;
+    move();
+  }
+}
+
 extern const byte font3x3[];
 
-Player p1(0);
-Player p2(1);
 Ball ball;
 
 void drawBackground() {
@@ -114,13 +152,12 @@ void drawBackground() {
   gb.display.drawPixel(83, 3);
 
   // rounds won
-  for (byte i = 0; i < p1.roundsWon; i++) {
-    byte x = 36 - i*4;
-    gb.display.drawFastHLine(x, 6, 3);
-  }
-  for (byte i = 0; i < p2.roundsWon; i++) {
-    byte x = 44 + i*4;
-    gb.display.drawFastHLine(x, 6, 3);
+  for (byte p = 0; p < 2; p++) {
+    for (byte i = 0; i < player[p].roundsWon; i++) {
+      int dir = player[p].roundsBarDir;
+      byte x = player[p].roundsBarX + i*4*dir;
+      gb.display.drawFastHLine(x, 6, 3);
+    }    
   }
 }
 
@@ -131,20 +168,21 @@ void setup() {
   gb.titleScreen(F("PONG 2017"));
   gb.pickRandomSeed();
   gb.battery.show = false;
+  for (byte i = 0; i < 2; i++) player[i].initPlayer(i);
 }
 
 void loop() {
   if (gb.update()) {
     drawBackground();
 
-    p1.drawPad();
-    p2.drawPad();
-
     ball.move();
+    ball.padCollide();
     ball.draw();
 
-    if (gb.buttons.repeat(BTN_UP, 1)) p1.moveUp();
-    if (gb.buttons.repeat(BTN_DOWN, 1)) p1.moveDown();
+    for (byte i = 0; i < 2; i++) { player[i].drawPad(); }
+
+    if (gb.buttons.repeat(BTN_UP, 1)) player[0].moveUp();
+    if (gb.buttons.repeat(BTN_DOWN, 1)) player[0].moveDown();
     if (gb.buttons.pressed(BTN_C)) gb.titleScreen(F("PONG 2017"));
   }
 }
