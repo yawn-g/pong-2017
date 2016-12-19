@@ -115,10 +115,12 @@ void Ball::move() {
 }
 
 void Ball::padCollide() {
-  if (gb.collideRectRect(x, y, width, width, player[0].x, player[0].padTop(), player[0].padWidth, player[0].padHeight)) {
-    gb.sound.playTick();
-    xSpeed = -xSpeed;
-    move();
+  for (byte p = 0; p < 2; p++) {
+    if (gb.collideRectRect(x, y, width, width, player[p].x, player[p].padTop(), player[p].padWidth, player[p].padHeight)) {
+      gb.sound.playTick();
+      xSpeed = -xSpeed;
+      //move();
+    }
   }
 }
 
@@ -184,6 +186,10 @@ void loop() {
     ball.draw();
 
     for (byte i = 0; i < 2; i++) { player[i].drawPad(); }
+
+    // move p2
+    if (ball.y > player[1].y) player[1].moveDown();
+    if (ball.y < player[1].y) player[1].moveUp();
 
     if (gb.buttons.repeat(BTN_UP, 1)) player[0].moveUp();
     if (gb.buttons.repeat(BTN_DOWN, 1)) player[0].moveDown();
