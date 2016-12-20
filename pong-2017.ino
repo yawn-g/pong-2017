@@ -2,8 +2,26 @@
 #include <Gamebuino.h>
 Gamebuino gb;
 
+#define EXPANDPAD 0
+#define SHRINKPAD 1
+#define EXTRAPAD 2
+#define FREEZE 3
+#define INVISIBALL 4
+
+const byte trickDuration[5] = { 60, 60, 60, 20, 30 };
+
+const char trickName[5][11] PROGMEM =
+{
+  "Expand pad",
+  "Shrink pad",
+  "Extra pad",
+  "Freeze",
+  "Invisiball"
+};
+
 class Player {
   private:
+    byte trickFC;
     
   public:
     Player();
@@ -11,16 +29,22 @@ class Player {
     byte x, y;
     byte padWidth, padHeight;
     byte roundsWon;
-    byte xSpeed, ySpeed;
+    float xSpeed, ySpeed;
     byte points;
     int roundsBarDir;
     byte roundsBarX;
+    bool tricksMenuOn;
+    byte trick[5];
+    bool trickOn;
+    byte tricksCursor;
 
     void initPlayer(byte p);
-    byte padTop(); // return the top pixel of the pad
+    byte padTop(); // returns the top pixel of the pad
     void drawPad();
     void moveUp();
     void moveDown();
+    void updateTricksMenu();
+    void updateTrick();
 };
 
 Player::Player() {
@@ -43,6 +67,7 @@ void Player::initPlayer(byte p) {
     roundsBarX = 44;
     roundsBarDir = 1;
   }
+  tricksCursor = 2;
 }
 
 byte Player::padTop() {
@@ -65,6 +90,33 @@ void Player::moveUp() {
 }
 void Player::moveDown() {
   if (padTop() + padHeight < LCDHEIGHT-2) y += ySpeed;
+}
+
+void Player::updateTricksMenu() {
+  if (tricksMenuOn) {
+    gb.display.cursorX = 10 + tricksCursor*4;
+    gb.display.cursorY = 39;
+    gb.display.println(char(25));
+    gb.display.cursorX = 10;
+    gb.display.print("01234");
+  }
+}
+
+void Player::updateTrick() {
+  if (trickOn) {
+    if (trickFC == trickDuration[tricksCursor]) {
+      padHeight = 7;
+      trickOn = false;
+      trickFC = 0;
+      return;
+    }
+    switch (tricksCursor) {
+      case EXPANDPAD:
+        padHeight = 9;
+        break;
+    }
+    trickFC++;
+  }
 }
 
 Player player[2];
@@ -137,16 +189,26 @@ void setup() {
   gb.titleScreen(F("PONG 2017"));
   gb.pickRandomSeed();
   gb.battery.show = false;
-  for (byte i = 0; i < 2; i++) player[i].initPlayer(i);
+  for (byte i = 0; i < 2; i++) {
+    player[i].initPlayer(i);
+    for (byte j = 0; j < 5; j++) {
+      player[i].trick[j] = j;
+    }
+  }
+
 }
 
 void loop() {
   if (gb.update()) {
     drawBackground();
 
+    for (byte i = 0; i < 2; i++) player[i].updateTrick();
+
     ball.move();
     ball.padCollide();
     ball.draw();
+
+    player[0].updateTricksMenu();
 
     for (byte i = 0; i < 2; i++) { player[i].drawPad(); }
 
@@ -156,6 +218,22 @@ void loop() {
 
     if (gb.buttons.repeat(BTN_UP, 1)) player[0].moveUp();
     if (gb.buttons.repeat(BTN_DOWN, 1)) player[0].moveDown();
+
+    if (gb.buttons.pressed(BTN_LEFT) && player[0].tricksMenuOn && player[0].tricksCursor > 0)
+      player[0].tricksCursor--;
+    if (gb.buttons.pressed(BTN_RIGHT) && player[0].tricksMenuOn && player[0].tricksCursor < 4)
+      player[0].tricksCursor++;
+
+    if (gb.buttons.pressed(BTN_B) && !player[0].trickOn) {
+      player[0].tricksMenuOn = -player[0].tricksMenuOn+1;
+    }
+
+    if (gb.buttons.pressed(BTN_A) && player[0].tricksMenuOn) {
+      gb.sound.playOK();
+      player[0].tricksMenuOn = false;
+      player[0].trickOn = true;      
+    }
+    
     if (gb.buttons.pressed(BTN_C)) {
       gb.titleScreen(F("PONG 2017"));
       gb.battery.show = false;
