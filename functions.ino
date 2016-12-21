@@ -1,3 +1,4 @@
+// draw background
 void drawBackground() {
   byte yOffset;
   if (ball.y < 8) yOffset = ball.y;
@@ -34,6 +35,21 @@ void drawBackground() {
       byte x = player[p].roundsBarX + i*4*dir;
       gb.display.drawFastHLine(x, 6 -(8-yOffset), 3);
     }    
+  }
+
+  // selected trick
+  for (byte p = 0; p < 2; p++) {      // for each player
+    if (player[p].trickOn == true) {  // if trickOn = true
+      gb.display.cursorX = 10;
+      gb.display.cursorY = 43;
+      for (byte i = 0; i < 5; i++) {  // for each trick
+        if (player[p].selectedTrick == player[p].tricks[i]) {
+          gb.display.print(char(player[p].selectedTrick));
+          break;
+        }
+        else gb.display.print(" ");
+      }
+    }
   }
 }
 

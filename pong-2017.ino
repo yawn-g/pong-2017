@@ -2,21 +2,60 @@
 #include <Gamebuino.h>
 Gamebuino gb;
 
-#define EXPANDPAD 0
-#define SHRINKPAD 1
-#define EXTRAPAD 2
-#define FREEZE 3
-#define INVISIBALL 4
 
-const byte trickDuration[5] = { 60, 60, 60, 20, 30 };
+/*
+ * CONFIG
+ */
 
-const char trickName[5][11] PROGMEM =
-{
-  "Expand pad",
-  "Shrink pad",
-  "Extra pad",
-  "Freeze",
-  "Invisiball"
+byte nbRounds;
+
+ 
+/*
+ * TRICKS
+ * number is ID and ASCII code
+ */
+
+#define INVISIBALL 42 // *
+#define BORDERS 61    // =
+#define EXTRAPAD 67   // C
+#define FREEZE 70     // F
+#define SHRINKPAD 72  // H
+#define EXPANDPAD 88  // X
+
+byte tricks[128];
+
+const byte trickDuration[128] = {
+  10, 10, 10, 10, 10, 10, 10, 10, 10, 10, // 0-9
+  10, 10, 10, 10, 10, 10, 10, 10, 10, 10, // 10-19
+  10, 10, 10, 10, 10, 10, 10, 10, 10, 10, // 20-29
+  10, 10, 10, 10, 10, 10, 10, 10, 10, 10, // 30-39
+  10, 10, 20, 10, 10, 10, 10, 10, 10, 10, // 40-49
+  10, 10, 10, 10, 10, 10, 10, 10, 10, 10, // 50-59
+  10, 60, 10, 10, 10, 10, 10, 60, 10, 10, // 60-69
+  20, 10, 60, 10, 10, 10, 10, 10, 10, 10, // 70-79
+  10, 10, 10, 10, 10, 10, 10, 10, 60, 10, // 80-89
+  10, 10, 10, 10, 10, 10, 10, 10, 10, 10, // 90-99
+  10, 10, 10, 10, 10, 10, 10, 10, 10, 10, // 100-109
+  10, 10, 10, 10, 10, 10, 10, 10, 10, 10, // 110-119
+  10, 10, 10, 10, 10, 10, 10, 10          // 120-127
+};
+
+
+/*
+ * CLASS DECLARATIONS
+ */
+ 
+class RectObstacle {
+  private:
+    RectObstacle();
+  public:
+    float x, y;
+    byte w, h;
+    float xSpeed, ySpeed;
+    byte xd, yd;
+    byte smooth;
+
+    void smoothMove();
 };
 
 class Player {
@@ -24,7 +63,10 @@ class Player {
     byte trickFC;
     
   public:
+    // constructor
     Player();
+
+    // variables
     byte id;
     byte x, y;
     byte padWidth, padHeight;
@@ -34,10 +76,12 @@ class Player {
     int roundsBarDir;
     byte roundsBarX;
     bool tricksMenuOn;
-    byte trick[5];
-    bool trickOn;
+    byte tricks[5];
+    bool trickOn[5];
     byte tricksCursor;
+    byte selectedTrick;
 
+    // functions
     void initPlayer(byte p);
     byte padTop(); // returns the top pixel of the pad
     void drawPad();
@@ -47,77 +91,6 @@ class Player {
     void updateTrick();
 };
 
-Player::Player() {
-  y = 23;
-  padHeight = 7;
-  padWidth = 2;
-  roundsWon = 5;
-  ySpeed = 2;
-}
-
-void Player::initPlayer(byte p) {
-  id = p;
-  if (id == 0) {
-    x = 0;
-    roundsBarX = 36;
-    roundsBarDir = -1;
-  }
-  else {
-    x = 82;
-    roundsBarX = 44;
-    roundsBarDir = 1;
-  }
-  tricksCursor = 2;
-}
-
-byte Player::padTop() {
-  return y - floor(padHeight/2);
-}
-void Player::drawPad() {
-  gb.display.setColor(BLACK);
-  gb.display.fillRect(x, padTop(), padWidth, padHeight);
-  // debug
-  /*
-  gb.display.cursorY = padTop() +1;
-  gb.display.cursorX = 4;
-  gb.display.print(id);
-  gb.display.print(": x=");
-  gb.display.print(x);*/
-}
-
-void Player::moveUp() {
-  if (padTop() > 1) y -= ySpeed;
-}
-void Player::moveDown() {
-  if (padTop() + padHeight < LCDHEIGHT-2) y += ySpeed;
-}
-
-void Player::updateTricksMenu() {
-  if (tricksMenuOn) {
-    gb.display.cursorX = 10 + tricksCursor*4;
-    gb.display.cursorY = 39;
-    gb.display.println(char(25));
-    gb.display.cursorX = 10;
-    gb.display.print("01234");
-  }
-}
-
-void Player::updateTrick() {
-  if (trickOn) {
-    if (trickFC == trickDuration[tricksCursor]) {
-      padHeight = 7;
-      trickOn = false;
-      trickFC = 0;
-      return;
-    }
-    switch (tricksCursor) {
-      case EXPANDPAD:
-        padHeight = 9;
-        break;
-    }
-    trickFC++;
-  }
-}
 
 Player player[2];
 
@@ -134,53 +107,19 @@ class Ball {
     void padCollide();
 };
 
-Ball::Ball() {
-  x = 41;
-  y = 23;
-  xSpeed = 1;
-  ySpeed = 1;
-  width = 2;
-}
-
-void Ball::draw() {
-  gb.display.setColor(BLACK);
-  gb.display.fillRect(x, y, width, width);
-}
-
-void Ball::move() {
-  if (xSpeed > 0) {
-    if (x < LCDWIDTH-2) x += xSpeed;
-    else xSpeed = -xSpeed;
-  }
-  if (xSpeed < 0) {
-    if (x > 0) x += xSpeed;
-    else xSpeed = -xSpeed;
-  }
-  if (ySpeed > 0) {
-    if (y < LCDHEIGHT-2) y += ySpeed;
-    else ySpeed = -ySpeed;
-  }
-  if (ySpeed < 0) {
-    if (y > 1) y += ySpeed;
-    else ySpeed = -ySpeed;
-  }
-}
-
-void Ball::padCollide() {
-  for (byte p = 0; p < 2; p++) {
-    if (gb.collideRectRect(x, y, width, width, player[p].x, player[p].padTop(), player[p].padWidth, player[p].padHeight)) {
-      gb.sound.playTick();
-      xSpeed = -xSpeed;
-      //move();
-    }
-  }
-}
-
 extern const byte font3x3[];
 
 Ball ball;
 
+/*
+ * FUNCTION DECLARATIONS
+ */
+
 void drawBackground();
+
+/*
+ * SETUP
+ */
 
 void setup() {
   Serial.begin(9600);
@@ -191,13 +130,14 @@ void setup() {
   gb.battery.show = false;
   for (byte i = 0; i < 2; i++) {
     player[i].initPlayer(i);
-    for (byte j = 0; j < 5; j++) {
-      player[i].trick[j] = j;
-    }
   }
 
 }
 
+/*
+ * LOOP
+ */
+ 
 void loop() {
   if (gb.update()) {
     drawBackground();
@@ -230,8 +170,9 @@ void loop() {
 
     if (gb.buttons.pressed(BTN_A) && player[0].tricksMenuOn) {
       gb.sound.playOK();
+      player[0].selectedTrick = player[0].tricks[player[0].tricksCursor];
       player[0].tricksMenuOn = false;
-      player[0].trickOn = true;      
+      player[0].trickOn[player[0].tricksCursor] = true;      
     }
     
     if (gb.buttons.pressed(BTN_C)) {
