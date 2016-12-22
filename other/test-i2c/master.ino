@@ -17,20 +17,24 @@ void masterRead(){
   if(Wire.requestFrom(2, SLAVE_DATA_BUFFER_LENGTH)){    // request 6 bytes from slave device #2
     disconnected = false;
     paused = false;
+    Serial.println("---");
     while(Wire.available()){    // slave may send less than requested
       char data_in = Wire.read(); // receive byte per byte
+      Serial.print(data_in, DEC);
+      Serial.print(": ");
       switch(data_in){
       case UP:
         slaveUp = Wire.read();
+        Serial.println(slaveUp, DEC);
         break;
       case DOWN:
         slaveDown = Wire.read();
         break;
       case NAME:
-        for (byte i = 0; i < 3; i++) {
-          Serial.println(char(data_in));
+        for (byte i = 0; i < NAME_LENGTH; i++) {
           slaveName[i] = Wire.read();
         }
+        Serial.println(slaveName);
         break;
       case SLAVE_PAUSED:
         gb.popup(F("Slave paused"),2);
@@ -42,6 +46,7 @@ void masterRead(){
         break;
       default:
         gb.popup(F("Wrong slave data"),2);
+        Serial.println("WD");
         paused = true;
         break;
       }

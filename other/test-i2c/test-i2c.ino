@@ -22,7 +22,7 @@ boolean slave_updated = false;
 #define RIGHT 13
 #define BUT_A 14
 #define BUT_B 15
-#define SLAVE_DATA_BUFFER_LENGTH 6
+#define SLAVE_DATA_BUFFER_LENGTH 7
 #define NAME_LENGTH 3
 
 char masterUp;
