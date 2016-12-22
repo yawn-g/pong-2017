@@ -7,8 +7,10 @@ Ball::Ball() {
 }
 
 void Ball::draw() {
-  gb.display.setColor(BLACK);
-  gb.display.fillRect(x, y, width, width);
+  if (ballVisible) {
+    gb.display.setColor(BLACK);
+    gb.display.fillRect(x, y, width, width);
+  }
 }
 
 void Ball::move() {

@@ -1,7 +1,9 @@
-// draw background
+/*
+ *    DRAW BACKGROUND
+ */
 void drawBackground() {
   byte yOffset;
-  if (ball.y < 8) yOffset = ball.y;
+  if (ball.y < 8 && hideHealth) yOffset = ball.y;
   else yOffset = 8;
 
   gb.display.clear();
@@ -37,17 +39,13 @@ void drawBackground() {
     }    
   }
 
-  // selected trick
+  // active tricks
   for (byte p = 0; p < 2; p++) {      // for each player
-    if (player[p].trickOn == true) {  // if trickOn = true
-      gb.display.cursorX = 10;
-      gb.display.cursorY = 43;
-      for (byte i = 0; i < 5; i++) {  // for each trick
-        if (player[p].selectedTrick == player[p].tricks[i]) {
-          gb.display.print(char(player[p].selectedTrick));
-          break;
-        }
-        else gb.display.print(" ");
+    gb.display.cursorY = 43;
+    for (byte i = 0; i < 5; i++) {    // for each trick
+      if (player[p].trickOn[i] == true) {
+        gb.display.cursorX = 10 + i*4;
+        gb.display.print(char(player[p].tricks[i]));
       }
     }
   }

@@ -1,13 +1,18 @@
 #include <SPI.h>
 #include <Gamebuino.h>
 Gamebuino gb;
-
+#include <Wire.h>
 
 /*
  * CONFIG
  */
 
-byte nbRounds;
+#define PAD_HEIGHT 7
+#define HEALTH 27
+#define TRICKS_PER_PLAYER 5
+byte nbRounds = 5;
+bool ballVisible = true;
+bool hideHealth = false;
 
  
 /*
@@ -15,12 +20,12 @@ byte nbRounds;
  * number is ID and ASCII code
  */
 
-#define INVISIBALL 42 // *
-#define BORDERS 61    // =
-#define EXTRAPAD 67   // C
-#define FREEZE 70     // F
-#define SHRINKPAD 72  // H
-#define EXPANDPAD 88  // X
+#define INVISIBALL 42  // *
+#define BORDERS 61     // =
+#define EXTRA_PAD 67   // C
+#define FREEZE 70      // F
+#define SHRINK_PAD 72  // H
+#define EXPAND_PAD 88  // X
 
 byte tricks[128];
 
@@ -29,7 +34,7 @@ const byte trickDuration[128] = {
   10, 10, 10, 10, 10, 10, 10, 10, 10, 10, // 10-19
   10, 10, 10, 10, 10, 10, 10, 10, 10, 10, // 20-29
   10, 10, 10, 10, 10, 10, 10, 10, 10, 10, // 30-39
-  10, 10, 20, 10, 10, 10, 10, 10, 10, 10, // 40-49
+  10, 10, 25, 10, 10, 10, 10, 10, 10, 10, // 40-49
   10, 10, 10, 10, 10, 10, 10, 10, 10, 10, // 50-59
   10, 60, 10, 10, 10, 10, 10, 60, 10, 10, // 60-69
   20, 10, 60, 10, 10, 10, 10, 10, 10, 10, // 70-79
@@ -60,7 +65,7 @@ class RectObstacle {
 
 class Player {
   private:
-    byte trickFC;
+    byte trickFC[5];
     
   public:
     // constructor
@@ -71,6 +76,7 @@ class Player {
     byte x, y;
     byte padWidth, padHeight;
     byte roundsWon;
+    byte health;
     float xSpeed, ySpeed;
     byte points;
     int roundsBarDir;
@@ -79,18 +85,17 @@ class Player {
     byte tricks[5];
     bool trickOn[5];
     byte tricksCursor;
-    byte selectedTrick;
+    byte selectedTrick; // peut-être à supprimer
 
     // functions
     void initPlayer(byte p);
-    byte padTop(); // returns the top pixel of the pad
+    byte padTop(); // returns the top pixel y coordinate of the pad
     void drawPad();
     void moveUp();
     void moveDown();
     void updateTricksMenu();
-    void updateTrick();
+    void updateTricks();
 };
-
 
 Player player[2];
 
@@ -107,15 +112,17 @@ class Ball {
     void padCollide();
 };
 
+Ball ball;
+
 extern const byte font3x3[];
 
-Ball ball;
 
 /*
  * FUNCTION DECLARATIONS
  */
 
 void drawBackground();
+void masterWrite();
 
 /*
  * SETUP
@@ -142,7 +149,7 @@ void loop() {
   if (gb.update()) {
     drawBackground();
 
-    for (byte i = 0; i < 2; i++) player[i].updateTrick();
+    for (byte i = 0; i < 2; i++) player[i].updateTricks();
 
     ball.move();
     ball.padCollide();
@@ -159,12 +166,16 @@ void loop() {
     if (gb.buttons.repeat(BTN_UP, 1)) player[0].moveUp();
     if (gb.buttons.repeat(BTN_DOWN, 1)) player[0].moveDown();
 
-    if (gb.buttons.pressed(BTN_LEFT) && player[0].tricksMenuOn && player[0].tricksCursor > 0)
-      player[0].tricksCursor--;
-    if (gb.buttons.pressed(BTN_RIGHT) && player[0].tricksMenuOn && player[0].tricksCursor < 4)
-      player[0].tricksCursor++;
+    if (gb.buttons.pressed(BTN_LEFT) && player[0].tricksMenuOn) {
+      if (player[0].tricksCursor > 0) player[0].tricksCursor--;
+      else player[0].tricksCursor = TRICKS_PER_PLAYER-1; 
+    }
+    if (gb.buttons.pressed(BTN_RIGHT) && player[0].tricksMenuOn) {
+      if (player[0].tricksCursor < TRICKS_PER_PLAYER-1) player[0].tricksCursor++;
+      else player[0].tricksCursor = 0;
+    }     
 
-    if (gb.buttons.pressed(BTN_B) && !player[0].trickOn) {
+    if (gb.buttons.pressed(BTN_B)) {
       player[0].tricksMenuOn = -player[0].tricksMenuOn+1;
     }
 

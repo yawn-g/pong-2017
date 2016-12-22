@@ -1,11 +1,18 @@
+/*
+ *    CONSTRUCTOR
+ */
 Player::Player() {
   y = 23;
-  padHeight = 7;
+  padHeight = PAD_HEIGHT;
   padWidth = 2;
+  health = HEALTH;
   roundsWon = 5;
   ySpeed = 2;
 }
 
+/*
+ *    OTHER INIT
+ */
 void Player::initPlayer(byte p) {
   id = p;
   if (id == 0) {
@@ -18,17 +25,25 @@ void Player::initPlayer(byte p) {
     roundsBarX = 44;
     roundsBarDir = 1;
   }
-  tricks[0] = EXPANDPAD;
+  tricks[0] = EXPAND_PAD;
   tricks[1] = BORDERS;
-  tricks[2] = EXTRAPAD;
+  tricks[2] = EXTRA_PAD;
   tricks[3] = FREEZE;
   tricks[4] = INVISIBALL;
   tricksCursor = 2;
 }
 
+
+/*
+ *    RETURNS TOP Y OF PAD
+ */
 byte Player::padTop() {
   return y - floor(padHeight/2);
 }
+
+/*
+ *    DRAW PAD
+ */
 void Player::drawPad() {
   gb.display.setColor(BLACK);
   gb.display.fillRect(x, padTop(), padWidth, padHeight);
@@ -41,13 +56,23 @@ void Player::drawPad() {
   gb.display.print(x);*/
 }
 
+/*
+ *    MOVE UPWARDS
+ */
 void Player::moveUp() {
   if (padTop() > 1) y -= ySpeed;
 }
+
+/*
+ *    MOVE DOWNWARDS
+ */
 void Player::moveDown() {
   if (padTop() + padHeight < LCDHEIGHT-2) y += ySpeed;
 }
 
+/*
+ *    UPDATE TRICKS MENU
+ */
 void Player::updateTricksMenu() {
   if (tricksMenuOn) {
     gb.display.cursorX = 10 + tricksCursor*4;
@@ -60,20 +85,44 @@ void Player::updateTricksMenu() {
   }
 }
 
-void Player::updateTrick() {
-  if (trickOn) {
-    if (trickFC == trickDuration[selectedTrick]) {
-      padHeight = 7;
-      trickOn = false;
-      trickFC = 0;
-      return;
+/*
+ *    UPDATE TRICKS
+ */
+void Player::updateTricks() {
+  // for each of the player's 5 tricks
+  for (byte t = 0; t < 5; t++) {
+    
+    if (trickOn[t]) {
+      
+      // if duration elapsed
+      if (trickFC[t] == trickDuration[tricks[t]]) {
+        // restore states
+        switch (tricks[t]) {
+          case EXPAND_PAD:
+            padHeight = PAD_HEIGHT;
+            break;
+          case INVISIBALL:
+            ballVisible = true;
+            break;
+        }
+
+        trickOn[t] = false;
+        trickFC[t] = 0;
+      }
+
+      // if duration not elapsed
+      else {
+        switch (tricks[t]) {
+          case EXPAND_PAD:
+            padHeight = 11;
+            break;
+          case INVISIBALL:
+            ballVisible = false;
+            break;
+        }
+      }
+      trickFC[t]++;
     }
-    switch (selectedTrick) {
-      case EXPANDPAD:
-        padHeight = 11;
-        break;
-    }
-    trickFC++;
   }
 }
 
